@@ -11,7 +11,7 @@ const userSchema = new Schema(
       trim: true,
       index: true,
     },
-    email: {
+    phoneno: {
       type: String,
       required: true,
       unique: true,
@@ -25,6 +25,10 @@ const userSchema = new Schema(
     role: {
       enum: ["admin", "buyer", "seller"],
       type: String,
+    },
+    region: {
+      type: String,
+      required: true,
     },
     refreshTokens: {
       type: String,

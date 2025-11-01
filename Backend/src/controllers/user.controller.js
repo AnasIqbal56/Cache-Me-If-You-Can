@@ -7,53 +7,33 @@ import jwt from "jsonwebtoken";
 
 const registerUser = asyncHandler(async (req, res) => {
   // get user details
-  const {  email, username, password , role } = req.body;
-  //console.log(email)
+  const { phoneno, username, password , role, region } = req.body;
 
-  // validate data
-
-  // bellow given will check if any one of the fields provided is null or not by some method
-  // this some method will take arguments and check each element in array and returns T/F
-
-  // if (
-  //   [email, username, password, role].some((field) => field?.trim() === "")
-  // ) {
-  //   throw new APIError(400, "All fields are required");
-  // }
-
-  // // existing user check
-
-  // const existedUser = await User.findOne({
-  //   $or: [{ username }, { email } ,{ role }],
-  // });
-
-  // check required fields only
-  if ([email, username, password].some((field) => !field || field.trim() === "")) {
-    throw new APIError(400, "Email, username, and password are required");
+  if ([username, phoneno, password, region, role ].some((field) => !field || field.trim() === "")) {
+    throw new APIError(400, "Phone no, username, region, role and password are required");
   }
 
-  // optional role validation — only if it's provided
   if (role && role.trim() === "") {
     throw new APIError(400, "Role cannot be empty if provided");
   }
 
-  // check if user already exists
   const existedUser = await User.findOne({
-    $or: [{ username }, { email }],
+    $or: [{ username }, { phoneno }],
   });
 
 
   if (existedUser) {
-    throw new APIError(409, "email or username already exists");
+    throw new APIError(409, "Phoneno or username already exists");
   }
 
   // create user object and create mongo entry
 
   const user = await User.create({
-    email,
+    phoneno,
     password,
     username,
     role, // by default role is buyer
+    region,
   });
 
   // remove password and refresh token field from response
@@ -96,21 +76,22 @@ const generateAccessandRefreshTokens = async (userId) => {
   }
 };
 
+// TESTED WORKING
 const loginUser = asyncHandler(async (req, res) => {
   // req body -> data
 
-  const { email, username, password } = req.body;
+  const { phoneno, username, password } = req.body;
 
   // validate username, email
 
-  if (!(username || email)) {
+  if (!(username || phoneno)) {
     throw new APIError(400, "Username or email is required");
   }
 
   // find if user exist or not
 
   const user = await User.findOne({
-    $or: [{ username }, { email }],
+    $or: [{ username }, { phoneno }],
   });
 
   if (!user) {
@@ -159,6 +140,7 @@ const loginUser = asyncHandler(async (req, res) => {
     );
 });
 
+// TESTED WORKING
 const logoutUser = asyncHandler(async (req, res) => {
   //find user
 
@@ -172,16 +154,6 @@ const logoutUser = asyncHandler(async (req, res) => {
       new: true,
     }
   );
-  // await User.findByIdAndUpdate(
-  //     {
-  //         $set:{
-  //             refreshToken : undefined
-  //         }
-  //     },
-  //     {
-  //         new: true
-  //     }
-  // )
 
   const options = {
     // to make it only server configureable
@@ -264,7 +236,9 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, {}, "Password Changed"));
 });
 
+//---------dead
 const getCurrentUser = asyncHandler(async (req, res) => {
+  
   return res
     .status(200)
     .json(
@@ -273,20 +247,31 @@ const getCurrentUser = asyncHandler(async (req, res) => {
     );
 });
 
+// TESTED WORKING
 const updateAccountDetails = asyncHandler(async (req, res) => {
-  const { username, email } = req.body;
+  const { username, phoneno } = req.body;
+  const { region, phonenotochange } = req.body;
 
-  if (!(username || email)) {
+  if (!(username || phoneno)) {
     throw new APIError(400, "All fields are required");
+  }
+
+  const checkUser = await User.findOne({
+    $or: [{ username }, { phoneno: phonenotochange }],
+    _id: { $ne: mongoose.Types.ObjectId(req.user?._id) },
+  });
+
+  if (checkUser) {
+    throw new APIError(409, "Phoneno or username already exists");
   }
 
   const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
       $set: {
-        // can be as fullName only and it will also save it as
         username: username,
-        email: email,
+        phoneno: phonenotochange,
+        region: region,
       },
     },
     { new: true }
