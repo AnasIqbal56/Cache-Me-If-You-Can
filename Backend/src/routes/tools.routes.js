@@ -8,14 +8,12 @@ import {
     addWasteCollectionCenter,
     getAllWasteCenters,
     electricityBillEstimator,
-    getYouTubeTranscript
 } from '../controllers/tools.controller.js';
 import { verifyJWT } from '../middlewares/auth.middleware.js';
 import { authorizeRoles } from '../middlewares/role.middleware.js';
 
 const router = Router();
 
-router.route('/transcribe/youtube').post(verifyJWT, authorizeRoles("seller", "admin"), getYouTubeTranscript);
 
 //_____________________________________________________________
 
