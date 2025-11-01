@@ -29,14 +29,6 @@ const productSchema = new Schema(
       type: [String],
       required: true,
     },
-    verified: {
-      type: Boolean,
-      default: false,
-    },
-    verificationId: {
-      type: Schema.Types.ObjectId,
-      ref: "Verification",
-    },
   },
   { timestamps: true }
 );

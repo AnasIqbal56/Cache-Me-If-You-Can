@@ -1,0 +1,110 @@
+{
+    "info": {
+        "name": "Stripe Integration Tests",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Seller - Create Stripe Account",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{jwt_token}}",
+                        "type": "text"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"email\": \"seller@example.com\",\n    \"country\": \"US\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/seller/stripe/account",
+                    "host": ["{{baseUrl}}"],
+                    "path": ["seller", "stripe", "account"]
+                }
+            }
+        },
+        {
+            "name": "Seller - Get Stripe Status",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{jwt_token}}",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/seller/stripe/status",
+                    "host": ["{{baseUrl}}"],
+                    "path": ["seller", "stripe", "status"]
+                }
+            }
+        },
+        {
+            "name": "Order - Create with Payment",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{jwt_token}}",
+                        "type": "text"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"productId\": \"your_product_id\",\n    \"paymentMethodId\": \"pm_card_visa\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/order/create",
+                    "host": ["{{baseUrl}}"],
+                    "path": ["order", "create"]
+                }
+            }
+        },
+        {
+            "name": "Order - Cancel and Refund",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{jwt_token}}",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/order/cancel/:orderId",
+                    "host": ["{{baseUrl}}"],
+                    "path": ["order", "cancel", ":orderId"],
+                    "variable": [
+                        {
+                            "key": "orderId",
+                            "value": "your_order_id"
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:8000"
+        }
+    ]
+}

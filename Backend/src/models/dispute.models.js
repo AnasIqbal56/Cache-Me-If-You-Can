@@ -24,22 +24,12 @@ const disputeSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["Open", "Resolved", "In review", "Refunded"],
+      enum: ["Open", "Resolved", "In review", "Refunded","Pending"],
       default: "pending",
     },
-    evidence:[
-        { type: String }
-    ],
-    inpsectionProvider:{
-        type:String,
-    },
-    inpsectionCertificationId:{
-        type:String,
-    },
-    inpsectionUrl:{
-        type:String,
-    },
-  },
+    evidence:{
+        type: [String],
+                   },},
   { timestamps: true }
 );
 
