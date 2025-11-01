@@ -27,11 +27,12 @@ import userRouter from "./routes/user.routes.js";
 import productRouter from "./routes/product.routes.js";
 import orderRouter from "./routes/order.routes.js";
 import adminRouter from "./routes/admin.routes.js";
-
+import sellerRouter from "./routes/seller.routes.js";
 /// ROUTES declaration
 
 app.use("/api/v/users", userRouter);
 app.use("/api/v/products",productRouter);
 app.use("/api/v/orders",orderRouter);
 app.use("/api/v/admins",adminRouter);
+app.use("/api/v/sellers",sellerRouter);
 export { app };
