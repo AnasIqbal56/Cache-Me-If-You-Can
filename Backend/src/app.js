@@ -29,6 +29,8 @@ import orderRouter from "./routes/order.routes.js";
 import adminRouter from "./routes/admin.routes.js";
 import toolRouter from "./routes/tools.routes.js";
 import paymentRouter from "./routes/payment.routes.js";
+import loanRouter from "./routes/loan.routes.js";
+
 
 /// ROUTES declaration
 
@@ -41,5 +43,6 @@ app.use("/api/v/payments", paymentRouter);
 //app.use("/api/v/tools",toolRouter);
 //_________________________________________________
 
-app.use("/api/v/tools", toolRouter);
+app.use("/api/v/tools",toolRouter);
+app.use("/api/v/loans",loanRouter);
 export { app };

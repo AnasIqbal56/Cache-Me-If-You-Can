@@ -24,9 +24,6 @@ export default function Signup() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [showAdminModal, setShowAdminModal] = useState(false);
-  const [adminPassword, setAdminPassword] = useState("");
-  const [adminError, setAdminError] = useState("");
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -140,22 +137,6 @@ export default function Signup() {
       }
       
       setErrors({ name: errorMessage });
-    }
-  };
-
-  const handleAdminAccess = () => {
-    // In production, this should be a secure backend check
-    const ADMIN_PASSWORD = "admin123"; // This should be in environment variables
-    
-    if (adminPassword === ADMIN_PASSWORD) {
-      setAdminError("");
-      setShowAdminModal(false);
-      setAdminPassword("");
-      // Redirect to admin page or set admin mode
-      alert("Admin access granted! Redirecting to admin panel...");
-      // In production: navigate to admin dashboard
-    } else {
-      setAdminError("Incorrect admin password. Please try again.");
     }
   };
 
@@ -435,88 +416,16 @@ export default function Signup() {
 
           {/* Admin Access Button - Footer */}
           <div className="mt-6 pt-5 border-t border-text-200">
-            <button
-              type="button"
-              onClick={() => setShowAdminModal(true)}
+            <Link
+              to="/admin-login"
               className="w-full py-2.5 px-4 text-xs text-text-600 hover:text-text-800 hover:bg-background-50 rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
             >
               <span>🥬</span>
               <span>Are you an Admin?</span>
-            </button>
+            </Link>
           </div>
         </div>
       </div>
-
-      {/* Admin Password Modal */}
-      {showAdminModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-            <div className="text-center mb-5">
-              <div className="text-4xl mb-3">🥬</div>
-              <h3 className="text-xl font-bold text-text-900 mb-1">Admin Access</h3>
-              <p className="text-sm text-text-600">Enter admin password to continue</p>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="adminPassword" className="label-field">
-                  🔑 ADMIN PASSWORD
-                </label>
-                <input
-                  id="adminPassword"
-                  type="password"
-                  value={adminPassword}
-                  onChange={(e) => {
-                    setAdminPassword(e.target.value);
-                    setAdminError("");
-                  }}
-                  placeholder="Enter password"
-                  className={`input-field ${adminError ? "border-red-500 focus:border-red-500 focus:ring-red-200" : ""}`}
-                  onKeyPress={(e) => {
-                    if (e.key === "Enter") {
-                      handleAdminAccess();
-                    }
-                  }}
-                  autoFocus
-                />
-                {adminError && (
-                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                    <span>⚠️</span>
-                    <span>{adminError}</span>
-                  </p>
-                )}
-              </div>
-
-              <div className="flex gap-3 mt-5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAdminModal(false);
-                    setAdminPassword("");
-                    setAdminError("");
-                  }}
-                  className="btn-outline flex-1"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleAdminAccess}
-                  className="btn-primary flex-1"
-                >
-                  Access
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-5 p-3 bg-primary-50 rounded-lg border border-primary-200">
-              <p className="text-xs text-text-700 text-center">
-                <span className="text-lg">🍃</span> Only authorized administrators can access this section.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
