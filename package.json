@@ -5,6 +5,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
+        "prestart": "chmod +x start.sh",
     "start": "./start.sh",
     "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js",
     "seed:waste-centers": "node src/scripts/seedWasteCenters.js"
