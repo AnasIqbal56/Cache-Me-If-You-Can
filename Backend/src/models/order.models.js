@@ -2,33 +2,66 @@ import mongoose, { Schema } from "mongoose";
 
 const orderSchema = new Schema(
   {
-    productId: {
-      type: Schema.Types.ObjectId,
-      ref: "Product",
-    },
+    products: [
+      {
+        productId: {
+          type: Schema.Types.ObjectId,
+          ref: "Product",
+          required: true,
+        },
+        quantity: {
+          type: Number,
+          required: true,
+          min: 1,
+        },
+        price: {
+          type: Number,
+          required: true,
+        },
+        sellerId: {
+          type: Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+      },
+    ],
     buyerId: {
       type: Schema.Types.ObjectId,
       ref: "User",
-    },
-    sellerId: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
+      required: true,
     },
     status: {
       type: String,
       enum: [
         "pending",
-        "Held",
+        "processing",
         "shipped",
-        "Completed",
-        "Disputed",
-        "Refunded",
+        "completed",
+        "disputed",
+        "refunded",
+        "cancelled",
       ],
       default: "pending",
     },
-    amount: {
+    totalAmount: {
       type: Number,
       required: true,
+    },
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "paid", "failed", "refunded"],
+      default: "pending",
+    },
+    paymentIntentId: {
+      type: String,
+    },
+    shippingAddress: {
+      fullName: String,
+      phone: String,
+      address: String,
+      city: String,
+      state: String,
+      pincode: String,
     },
     shippingProvider: {
       type: String,

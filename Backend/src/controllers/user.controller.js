@@ -60,7 +60,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
   return res
     .status(201)
-    .json(new ApiResponse(200, createdUser, "User registered Successfully"));
+    .json(new ApiResponse(201, "User registered Successfully", createdUser));
 });
 
 const generateAccessandRefreshTokens = async (userId) => {
@@ -134,12 +134,12 @@ const loginUser = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         200,
+        "User Logged in Successfully",
         {
           user: loggedInUser,
           accessToken,
           refreshToken,
-        },
-        "User Logged in Successfully"
+        }
       )
     );
 });
@@ -169,7 +169,7 @@ const logoutUser = asyncHandler(async (req, res) => {
     .status(200)
     .clearCookie("accessToken", options)
     .clearCookie("refreshToken", options)
-    .json(new ApiResponse(200, {}, "User Logged Out Successfully"));
+    .json(new ApiResponse(200, "User Logged Out Successfully", {}));
 });
 
 // UNFINISHED || causing issues
@@ -213,8 +213,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       .json(
         new ApiResponse(
           200,
-          { refreshToken: newrefreshToken },
-          "Access token Refreshed"
+          "Access token Refreshed",
+          { refreshToken: newrefreshToken }
         )
       );
   } catch (err) {
@@ -237,7 +237,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 
   await user.save({ validateBeforeSave: false });
 
-  return res.status(200).json(new ApiResponse(200, {}, "Password Changed"));
+  return res.status(200).json(new ApiResponse(200, "Password Changed", {}));
 });
 
 //---------dead
@@ -246,8 +246,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(
-      200,
-      new ApiResponse(200, req.user, "Current User Fetched Successfully")
+      new ApiResponse(200, "Current User Fetched Successfully", req.user)
     );
 });
 
@@ -282,7 +281,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
   ).select("-password");
   return res
     .status(200)
-    .json(new ApiResponse(200, user, "User Information Updated Successfully"));
+    .json(new ApiResponse(200, "User Information Updated Successfully", user));
 });
 
 export {

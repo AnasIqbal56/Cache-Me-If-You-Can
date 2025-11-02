@@ -50,7 +50,9 @@ export const apiRequest = async (url: string, options: RequestInit = {}) => {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || 'An error occurred');
+      // Extract error message from backend response
+      const errorMessage = data.message || data.error || 'An error occurred';
+      throw new Error(errorMessage);
     }
 
     return data;
@@ -59,6 +61,7 @@ export const apiRequest = async (url: string, options: RequestInit = {}) => {
     if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
       throw new Error('Cannot connect to server. Please ensure the backend is running on port 8000.');
     }
+    // Re-throw the error with the original message
     throw error;
   }
 };

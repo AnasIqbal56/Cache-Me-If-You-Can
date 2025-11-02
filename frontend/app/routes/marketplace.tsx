@@ -2,6 +2,7 @@ import type { Route } from "./+types/marketplace";
 import { useState, useMemo, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
 import { API_ENDPOINTS, apiRequest } from "../config/api";
+import { useCart } from "../context/CartContext";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -40,6 +41,7 @@ type ProduceItem = {
 export default function Marketplace() {
   // Authentication check - in production, use proper auth context
   const navigate = useNavigate();
+  const { addToCart, getTotalItems } = useCart();
   const [isAuthenticated] = useState(() => {
     // For demo: check localStorage or session
     // In production: use proper auth context/provider
@@ -53,6 +55,22 @@ export default function Marketplace() {
   const [apiProducts, setApiProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [productsError, setProductsError] = useState<string | null>(null);
+
+  // Handle add to cart
+  const handleAddToCart = (item: ProduceItem) => {
+    const productId = item.id;
+    const price = parseFloat(item.price.replace('₹', ''));
+    const image = item.emoji.startsWith('img:') ? item.emoji.substring(4) : undefined;
+    
+    addToCart({
+      productId,
+      title: item.name,
+      price,
+      image,
+      sellerId: 'seller-id', // This should come from the product data
+      condition: item.badges[0] || 'Fresh',
+    });
+  };
 
   // Fetch products from API
   const fetchProducts = async () => {
@@ -366,6 +384,14 @@ export default function Marketplace() {
               <Link to="/" className="text-sm text-text-600 hover:text-primary-700 transition-colors font-medium">
                 Home
               </Link>
+              <Link to="/cart" className="relative btn-outline text-xs px-4 py-2 font-semibold flex items-center gap-2">
+                🛒 Cart
+                {getTotalItems() > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-accent-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {getTotalItems()}
+                  </span>
+                )}
+              </Link>
               <button onClick={handleLogout} className="btn-outline text-xs px-4 py-2 font-semibold uppercase tracking-widest">
                 🚪 LOGOUT
               </button>
@@ -562,8 +588,12 @@ export default function Marketplace() {
                       <span>Sustainable Farming</span>
                       <span>Verified Seller</span>
                     </div>
-                    <button type="button" className="btn-primary w-full text-sm font-semibold uppercase tracking-widest">
-                      Add to Cart
+                    <button 
+                      type="button" 
+                      onClick={() => handleAddToCart(item)}
+                      className="btn-primary w-full text-sm font-semibold uppercase tracking-widest"
+                    >
+                      🛒 Add to Cart
                     </button>
                   </div>
                 </article>
@@ -665,8 +695,12 @@ export default function Marketplace() {
                       <span>Sustainable Farming</span>
                       <span>Verified Seller</span>
                     </div>
-                    <button type="button" className="btn-primary w-full text-sm font-semibold uppercase tracking-widest">
-                      Add to Cart
+                    <button 
+                      type="button" 
+                      onClick={() => handleAddToCart(item)}
+                      className="btn-primary w-full text-sm font-semibold uppercase tracking-widest"
+                    >
+                      🛒 Add to Cart
                     </button>
                   </div>
                 </article>

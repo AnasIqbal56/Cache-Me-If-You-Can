@@ -5,6 +5,7 @@ export default [
   route("login", "routes/login.tsx"),
   route("signup", "routes/signup.tsx"),
   route("marketplace", "routes/marketplace.tsx"),
+  route("cart", "routes/cart.tsx"),
   route("farmer-dashboard", "routes/farmer-dashboard.tsx"),
   route("waste-report", "routes/waste-report.tsx"),
 ] satisfies RouteConfig;

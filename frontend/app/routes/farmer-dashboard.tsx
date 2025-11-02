@@ -44,7 +44,7 @@ export default function FarmerDashboard() {
     return typeof window !== 'undefined' ? localStorage.getItem('username') || 'Farmer' : 'Farmer';
   });
 
-  const [activeTab, setActiveTab] = useState<"overview" | "products" | "orders" | "analytics">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "products" | "orders" | "analytics" | "tools">("overview");
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
@@ -257,7 +257,7 @@ export default function FarmerDashboard() {
         {/* Tab Navigation */}
         <div className="card bg-white shadow-lg">
           <div className="flex flex-wrap gap-2">
-            {(["overview", "products", "orders", "analytics"] as const).map((tab) => (
+            {(["overview", "products", "orders", "tools", "analytics"] as const).map((tab) => (
               <button
                 key={tab}
                 type="button"
@@ -271,6 +271,7 @@ export default function FarmerDashboard() {
                 {tab === "overview" && "📊"}
                 {tab === "products" && "🥕"}
                 {tab === "orders" && "📦"}
+                {tab === "tools" && "🛠️"}
                 {tab === "analytics" && "📈"}
                 {" "}
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -473,6 +474,129 @@ export default function FarmerDashboard() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* Tools Tab */}
+        {activeTab === "tools" && (
+          <div className="space-y-6">
+            <div className="card bg-white shadow-lg">
+              <h2 className="text-xl font-bold text-text-900 mb-6 flex items-center gap-2">
+                <span>🛠️</span>
+                <span>Farming Tools & Resources</span>
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Crop Waste Reporting */}
+                <Link to="/waste-report" className="card bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 hover:shadow-lg transition-all group">
+                  <div className="flex items-start gap-4">
+                    <div className="text-5xl">♻️</div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-green-900 mb-2 group-hover:text-green-700">
+                        Report Crop Waste
+                      </h3>
+                      <p className="text-sm text-green-800 mb-3">
+                        Report excess crop waste for recycling and composting. Help reduce waste and earn extra income.
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-green-700 font-semibold">
+                        <span>Start Report</span>
+                        <span>→</span>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+
+                {/* Waste Center Locator */}
+                <div className="card bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 hover:shadow-lg transition-all cursor-pointer group">
+                  <div className="flex items-start gap-4">
+                    <div className="text-5xl">📍</div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-blue-900 mb-2 group-hover:text-blue-700">
+                        Find Waste Centers
+                      </h3>
+                      <p className="text-sm text-blue-800 mb-3">
+                        Locate nearby waste collection centers and recycling facilities. Get directions and contact information.
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-blue-700 font-semibold">
+                        <span>Coming Soon</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Weather Forecast */}
+                <div className="card bg-gradient-to-br from-amber-50 to-amber-100 border-2 border-amber-200 hover:shadow-lg transition-all cursor-pointer group">
+                  <div className="flex items-start gap-4">
+                    <div className="text-5xl">🌤️</div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-amber-900 mb-2 group-hover:text-amber-700">
+                        Weather Forecast
+                      </h3>
+                      <p className="text-sm text-amber-800 mb-3">
+                        Check weather conditions and forecasts for your region. Plan your farming activities accordingly.
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-amber-700 font-semibold">
+                        <span>Coming Soon</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Market Prices */}
+                <div className="card bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 hover:shadow-lg transition-all cursor-pointer group">
+                  <div className="flex items-start gap-4">
+                    <div className="text-5xl">💹</div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-purple-900 mb-2 group-hover:text-purple-700">
+                        Market Prices
+                      </h3>
+                      <p className="text-sm text-purple-800 mb-3">
+                        View real-time market prices for various crops. Make informed decisions about pricing your products.
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-purple-700 font-semibold">
+                        <span>Coming Soon</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Farming Tips */}
+                <div className="card bg-gradient-to-br from-teal-50 to-teal-100 border-2 border-teal-200 hover:shadow-lg transition-all cursor-pointer group">
+                  <div className="flex items-start gap-4">
+                    <div className="text-5xl">📚</div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-teal-900 mb-2 group-hover:text-teal-700">
+                        Farming Tips & Guides
+                      </h3>
+                      <p className="text-sm text-teal-800 mb-3">
+                        Access expert tips, best practices, and guides for sustainable farming and crop management.
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-teal-700 font-semibold">
+                        <span>Coming Soon</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Loan & Subsidies */}
+                <div className="card bg-gradient-to-br from-rose-50 to-rose-100 border-2 border-rose-200 hover:shadow-lg transition-all cursor-pointer group">
+                  <div className="flex items-start gap-4">
+                    <div className="text-5xl">🏦</div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-rose-900 mb-2 group-hover:text-rose-700">
+                        Loans & Subsidies
+                      </h3>
+                      <p className="text-sm text-rose-800 mb-3">
+                        Find information about agricultural loans, subsidies, and government schemes for farmers.
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-rose-700 font-semibold">
+                        <span>Coming Soon</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}

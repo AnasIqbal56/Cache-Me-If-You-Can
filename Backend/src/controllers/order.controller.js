@@ -8,113 +8,90 @@ import { Order } from "../models/order.models.js";
 import { Auditlog } from "../models/auditlog.models.js";
 import stripe from "../config/stripe.js";
 
-// ESCROW NOT SURE IN THIS SOME WORK NEEDED HERE
-// basic logic with Auditlog done
-// ______________________________HAVE TO DISCUSS SOME LOGIC WITH TEAM
+// Create order with multiple products
 const createOrder = asyncHandler(async (req, res) => {
   const buyerId = req.user._id;
-  const productId = req.body.productId;
-  const paymentMethodId = req.body.paymentMethodId;
+  const { products, shippingAddress, paymentMethodId } = req.body;
 
-  if (!(buyerId && productId && paymentMethodId)) {
-    throw new APIError(400, "Missing required fields");
+  console.log("📦 Creating order for buyer:", buyerId);
+  console.log("📦 Products:", products);
+
+  if (!buyerId) {
+    throw new APIError(401, "Authentication required");
   }
 
-  const buyerIdchk = await User.findById(buyerId).select("_id email");
-  if (!buyerIdchk) {
-    throw new APIError(404, "Buyer Not Found or Not Registered");
+  if (!products || products.length === 0) {
+    throw new APIError(400, "Cart is empty");
   }
 
-  if (!mongoose.Types.ObjectId.isValid(productId)) {
-    throw new APIError(400, "Invalid productId");
+  if (!shippingAddress) {
+    throw new APIError(400, "Shipping address is required");
   }
 
-  const product = await Product.findById(productId).select(
-    "price sellerId condition name",
-  );
-  if (!product) {
-    throw new APIError(404, "Product Not Found");
+  // Verify buyer exists
+  const buyer = await User.findById(buyerId).select("_id email");
+  if (!buyer) {
+    throw new APIError(404, "Buyer Not Found");
   }
-  const sellerId = product.sellerId?.toString();
-    
-  const amount = product.price;
-  const shippingProvider = null;
-  const trackingId = null;
 
-  try {
-    // Get seller's Stripe account ID
-    const seller = await User.findById(sellerId).select("stripeAccountId");
-    if (!seller?.stripeAccountId) {
-      throw new APIError(400, "Seller is not set up to receive payments");
+  // Validate and fetch product details
+  let totalAmount = 0;
+  const orderProducts = [];
+
+  for (const item of products) {
+    if (!mongoose.Types.ObjectId.isValid(item.productId)) {
+      throw new APIError(400, `Invalid productId: ${item.productId}`);
     }
 
-    // Calculate platform fee (e.g., 10%)
-    const platformFeePercent = 10;
-    const platformFeeAmount = Math.round((amount * platformFeePercent) / 100);
-    const sellerAmount = Math.round(amount * 100) - platformFeeAmount; // Convert to cents
+    const product = await Product.findById(item.productId).select("price sellerId title");
+    if (!product) {
+      throw new APIError(404, `Product not found: ${item.productId}`);
+    }
 
-    // Create payment intent with Stripe
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Convert to cents
-      currency: 'usd',
-      payment_method: paymentMethodId,
-      confirm: true,
-      application_fee_amount: platformFeeAmount,
-      transfer_data: {
-        destination: seller.stripeAccountId,
-      },
-      description: `Payment for ${product.name}`,
-      metadata: {
-        productId: productId,
-        buyerId: buyerId,
-        sellerId: sellerId,
-        sellerAmount: sellerAmount,
-        platformFee: platformFeeAmount
-      }
+    const itemTotal = product.price * item.quantity;
+    totalAmount += itemTotal;
+
+    orderProducts.push({
+      productId: item.productId,
+      quantity: item.quantity,
+      price: product.price,
+      sellerId: product.sellerId,
     });
+  }
 
-    if (paymentIntent.status !== 'succeeded') {
-      throw new APIError(400, "Payment failed");
-    }
+  console.log(`💰 Total amount: ₹${totalAmount}`);
 
-    // Create order after successful payment
-    const createdOrder = await Order.create({
-      buyerId,
-      sellerId,
-      productId,
-      status: "processing",
-      amount,
-      escrowRelease: false,
-      shippingProvider,
-      trackingId,
-      stripePaymentIntentId: paymentIntent.id
-    });
+  // Create order without payment for now (can add Stripe later)
+  const createdOrder = await Order.create({
+    buyerId,
+    products: orderProducts,
+    status: "pending",
+    totalAmount,
+    paymentStatus: "pending",
+    shippingAddress,
+  });
 
-    if (!createdOrder) {
-      // Refund the payment if order creation fails
-      await stripe.refunds.create({
-        payment_intent: paymentIntent.id
-      });
-      throw new APIError(500, "Something Went Wrong in Order Creation");
-    }
+  if (!createdOrder) {
+    throw new APIError(500, "Failed to create order");
+  }
 
+  console.log("✅ Order created:", createdOrder._id);
+
+  // Create audit logs for each seller
+  const sellers = [...new Set(orderProducts.map(p => p.sellerId.toString()))];
+  for (const sellerId of sellers) {
     await Auditlog.create({
       OrderId: createdOrder._id,
-      amount: createdOrder.amount,
+      amount: totalAmount, // Can be refined to seller-specific amount
       userId: buyerId,
       sellerId: sellerId,
       Action: "Order Created",
     });
-
-    return res
-      .status(201)
-      .json(new ApiResponse(201, "Order Created Successfully", createdOrder));
-  } catch (error) {
-    if (error.type === 'StripeCardError') {
-      throw new APIError(400, error.message);
-    }
-    throw error;
   }
+
+  return res
+    .status(201)
+    .json(new ApiResponse(201, "Order Created Successfully", createdOrder));
 });
 
 //     const Selleridchk = product.sellerId?.toString();
@@ -266,25 +243,48 @@ const getOrdersByUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, "Orders Fetched Successfully", orders));
 });
 
-// Working
+// Get orders for a seller
 const getOrdersBySeller = asyncHandler(async (req, res) => {
   const sellerId = req.user._id;
 
   if (!sellerId) {
-    throw new APIError(400, "Authentication Error", null);
+    throw new APIError(401, "Authentication Error");
   }
 
-  const orders = await Order.findOne({
-    sellerId,
-  });
+  console.log("📋 Fetching orders for seller:", sellerId);
 
-  if (!orders) {
-    throw new APIError(404, "No Orders Found for this Seller", null);
-  }
+  // Find all orders that contain products from this seller
+  const orders = await Order.find({
+    "products.sellerId": sellerId,
+  })
+    .populate("buyerId", "username phoneno")
+    .populate("products.productId", "title images")
+    .sort({ createdAt: -1 });
 
-  res
-    .status(200)
-    .json(new ApiResponse(200, "Orders Fetched Successfully", orders));
+  // Calculate revenue statistics
+  const totalRevenue = orders
+    .filter(o => o.paymentStatus === "paid" && o.status === "completed")
+    .reduce((sum, order) => {
+      const sellerProducts = order.products.filter(
+        p => p.sellerId.toString() === sellerId.toString()
+      );
+      return sum + sellerProducts.reduce((s, p) => s + (p.price * p.quantity), 0);
+    }, 0);
+
+  const pendingOrders = orders.filter(o => o.status === "pending").length;
+
+  console.log(`✅ Found ${orders.length} orders for seller`);
+
+  res.status(200).json(
+    new ApiResponse(200, "Orders Fetched Successfully", {
+      orders,
+      stats: {
+        totalRevenue,
+        totalOrders: orders.length,
+        pendingOrders,
+      },
+    })
+  );
 });
 
 // UNFINISHED
