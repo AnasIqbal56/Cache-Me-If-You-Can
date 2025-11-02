@@ -65,7 +65,7 @@ export default function Cart() {
                 Continue Shopping
               </Link>
               <div className="bg-primary-100 text-primary-700 px-3 py-1 rounded-full text-xs font-bold">
-                {getTotalItems()} items
+                {getTotalItems()} batches
               </div>
             </div>
           </div>
@@ -78,7 +78,7 @@ export default function Cart() {
             Your Shopping Cart
           </h1>
           <p className="text-sm md:text-base text-text-600">
-            Review your items and proceed to checkout
+            Review your bulk order and proceed to checkout (1 batch = 100kg)
           </p>
         </header>
 
@@ -109,7 +109,7 @@ export default function Cart() {
                       <span className="text-2xl font-bold text-primary-700">
                         ₹{item.price}
                       </span>
-                      <span className="text-sm text-text-500">per kg</span>
+                      <span className="text-sm text-text-500">per 100kg batch</span>
                     </div>
                   </div>
 
@@ -124,15 +124,18 @@ export default function Cart() {
 
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                        onClick={() => updateQuantity(item.productId, item.quantity - 100)}
                         className="w-8 h-8 rounded-lg bg-background-100 hover:bg-background-200 flex items-center justify-center font-bold"
-                        disabled={item.quantity <= 1}
+                        disabled={item.quantity <= 100}
                       >
                         −
                       </button>
-                      <span className="w-12 text-center font-bold">{item.quantity} kg</span>
+                      <div className="w-20 text-center">
+                        <div className="font-bold">{item.quantity / 100}</div>
+                        <div className="text-xs text-text-500">batches</div>
+                      </div>
                       <button
-                        onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                        onClick={() => updateQuantity(item.productId, item.quantity + 100)}
                         className="w-8 h-8 rounded-lg bg-background-100 hover:bg-background-200 flex items-center justify-center font-bold"
                       >
                         +
@@ -142,8 +145,9 @@ export default function Cart() {
                     <div className="text-right">
                       <p className="text-xs text-text-500 uppercase tracking-wider">Subtotal</p>
                       <p className="text-xl font-bold text-text-900">
-                        ₹{(item.price * item.quantity).toFixed(2)}
+                        ₹{(item.price * (item.quantity / 100)).toFixed(2)}
                       </p>
+                      <p className="text-xs text-text-500">({item.quantity}kg total)</p>
                     </div>
                   </div>
                 </div>

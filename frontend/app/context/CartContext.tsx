@@ -45,16 +45,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const existingItem = prev.find((i) => i.productId === item.productId);
       
       if (existingItem) {
-        // Increment quantity if item already exists
+        // Increment quantity by 100kg (1 batch) if item already exists
         return prev.map((i) =>
           i.productId === item.productId
-            ? { ...i, quantity: i.quantity + 1 }
+            ? { ...i, quantity: i.quantity + 100 }
             : i
         );
       }
       
-      // Add new item with quantity 1
-      return [...prev, { ...item, quantity: 1 }];
+      // Add new item with quantity 100kg (1 batch)
+      return [...prev, { ...item, quantity: 100 }];
     });
   };
 
@@ -80,11 +80,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const getTotalItems = () => {
-    return cartItems.reduce((total, item) => total + item.quantity, 0);
+    // Return total number of batches
+    return cartItems.reduce((total, item) => total + (item.quantity / 100), 0);
   };
 
   const getTotalPrice = () => {
-    return cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
+    // Price is per 100kg batch, quantity is in kg
+    return cartItems.reduce((total, item) => total + item.price * (item.quantity / 100), 0);
   };
 
   return (
