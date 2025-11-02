@@ -23,6 +23,8 @@ const getAllProducts = asyncHandler(async (req, res) => {
   const limit = 40; // number of products per page
   const skip = (page - 1) * limit;
 
+  console.log("📋 Fetching all products...");
+  
   // find products with pagination
   const products = await Product.find({})
     .skip(skip)
@@ -34,6 +36,8 @@ const getAllProducts = asyncHandler(async (req, res) => {
 
   // total pages
   const totalPages = Math.ceil(totalProducts / limit);
+
+  console.log(`📦 Found ${products.length} products (Total: ${totalProducts})`);
 
   return res.status(200).json(
     new ApiResponse(200, "Products fetched successfully", {
@@ -84,6 +88,8 @@ const createProduct = asyncHandler(async (req, res) => {
 
   const { title, description, price, condition, verificationId } = req.body;
 
+  console.log("📝 Creating product with:", { title, price, condition, filesCount: req.files?.length });
+
   // validate sellerId
   if (!sellerId) {
     throw new APIError(400, "SellerId Authentication Error");
@@ -107,6 +113,7 @@ const createProduct = asyncHandler(async (req, res) => {
     throw new APIError(400, "Maximum 12 images are allowed");
   }
 
+  console.log("📤 Uploading images to Cloudinary...");
   // Upload images to cloudinary
   const imageUploadPromises = req.files.map(file => uploadOnCloudinary(file.path));
   const uploadedImages = await Promise.all(imageUploadPromises);
@@ -119,6 +126,8 @@ const createProduct = asyncHandler(async (req, res) => {
   if (images.length === 0) {
     throw new APIError(400, "Failed to upload images");
   }
+
+  console.log(`✅ Uploaded ${images.length} images successfully`);
 
   const newProduct = await Product.create({
     title,
@@ -134,6 +143,8 @@ const createProduct = asyncHandler(async (req, res) => {
   if (!newProduct) {
     throw new APIError(500, "Something went wrong in product creation");
   }
+
+  console.log("✅ Product created with ID:", newProduct._id);
 
   return res
     .status(201)

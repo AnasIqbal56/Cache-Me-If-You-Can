@@ -1,6 +1,7 @@
 import type { Route } from "./+types/marketplace";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
+import { API_ENDPOINTS, apiRequest } from "../config/api";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -8,6 +9,19 @@ export function meta({}: Route.MetaArgs) {
     { name: "description", content: "Explore FreshHarvest marketplace for fresh vegetables and produce" },
   ];
 }
+
+type Product = {
+  _id: string;
+  title: string;
+  description: string;
+  price: number;
+  condition: string;
+  images: string[];
+  sellerId: string;
+  verified: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
 
 type ProduceItem = {
   id: string;
@@ -34,6 +48,59 @@ export default function Marketplace() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All Produce");
+  
+  // API Products state
+  const [apiProducts, setApiProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [productsError, setProductsError] = useState<string | null>(null);
+
+  // Fetch products from API
+  const fetchProducts = async () => {
+    try {
+      setLoadingProducts(true);
+      setProductsError(null);
+      const response = await apiRequest(API_ENDPOINTS.PRODUCTS);
+      
+      // The backend returns products in response.data.products
+      if (response.data && response.data.products) {
+        setApiProducts(response.data.products);
+      } else {
+        setApiProducts([]);
+      }
+    } catch (error: any) {
+      console.error("Error fetching products:", error);
+      setProductsError(error.message || 'Failed to fetch products');
+      setApiProducts([]);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchProducts();
+    }
+  }, [isAuthenticated]);
+
+  const handleLogout = async () => {
+    try {
+      // Call the backend logout API
+      await apiRequest(API_ENDPOINTS.LOGOUT, {
+        method: 'POST',
+      });
+      
+      // Clear local storage
+      localStorage.clear();
+      
+      // Redirect to home page
+      window.location.href = '/';
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Even if API call fails, clear local storage and redirect
+      localStorage.clear();
+      window.location.href = '/';
+    }
+  };
 
   const produce = useMemo<ProduceItem[]>(
     () => [
@@ -192,9 +259,37 @@ export default function Marketplace() {
     []
   );
 
+  // Convert API products to ProduceItem format with image support
+  const apiProduceItems = useMemo<ProduceItem[]>(() => {
+    return apiProducts.map((product) => ({
+      id: product._id,
+      name: product.title,
+      emoji: product.images && product.images.length > 0 
+        ? `img:${product.images[0]}` // Use special prefix to indicate it's an image URL
+        : "🌽", // Default emoji if no image
+      description: product.description,
+      price: `₹${product.price}`,
+      unit: "per kg",
+      origin: "From Farmer", // Can be enhanced with seller info
+      availability: product.verified ? "Verified ✓" : "Pending Verification",
+      badges: [
+        product.condition,
+        product.verified ? "Verified" : "Pending",
+        "Fresh from Farm" // Indicate it's a real product
+      ],
+      category: "Fruit", // Default category, can be enhanced
+      isBestSeller: false,
+    }));
+  }, [apiProducts]);
+
+  // Combine mock and API products
+  const allProducts = useMemo(() => {
+    return [...produce, ...apiProduceItems];
+  }, [produce, apiProduceItems]);
+
   // Filter produce based on search and category
   const filteredProduce = useMemo(() => {
-    let filtered = produce;
+    let filtered = allProducts;
 
     // When showing best sellers separately, exclude them from the main grid
     if (!searchQuery && selectedCategory === "All Produce") {
@@ -218,10 +313,10 @@ export default function Marketplace() {
     }
 
     return filtered;
-  }, [produce, selectedCategory, searchQuery]);
+  }, [allProducts, selectedCategory, searchQuery]);
 
   // Separate best sellers
-  const bestSellers = useMemo(() => produce.filter((item) => item.isBestSeller), [produce]);
+  const bestSellers = useMemo(() => allProducts.filter((item) => item.isBestSeller), [allProducts]);
 
   // Show authentication message if not logged in
   if (!isAuthenticated) {
@@ -237,10 +332,10 @@ export default function Marketplace() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link to="/login" className="btn-primary text-sm font-semibold uppercase tracking-widest">
-              Login to Continue
+              🍎 LOGIN TO CONTINUE
             </Link>
             <Link to="/signup" className="btn-outline text-sm font-semibold uppercase tracking-widest">
-              Create Account
+              📝 CREATE ACCOUNT
             </Link>
           </div>
           <div className="mt-6 pt-6 border-t border-text-200">
@@ -271,8 +366,8 @@ export default function Marketplace() {
               <Link to="/" className="text-sm text-text-600 hover:text-primary-700 transition-colors font-medium">
                 Home
               </Link>
-              <button className="btn-outline text-xs px-4 py-2">
-                Logout
+              <button onClick={handleLogout} className="btn-outline text-xs px-4 py-2 font-semibold uppercase tracking-widest">
+                🚪 LOGOUT
               </button>
             </nav>
           </div>
@@ -293,6 +388,28 @@ export default function Marketplace() {
             Discover seasonal produce, transparent pricing, and reliable sourcing information. Every listing is verified to maintain the FreshHarvest quality promise.
           </p>
         </header>
+
+        {/* Loading State */}
+        {loadingProducts && (
+          <div className="card bg-white shadow-lg text-center py-12">
+            <div className="text-6xl mb-4 animate-pulse">🌾</div>
+            <h3 className="text-xl font-semibold text-text-900 mb-2">Loading Fresh Produce...</h3>
+            <p className="text-sm text-text-600">Fetching the latest products from our farmers</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {productsError && !loadingProducts && (
+          <div className="card bg-yellow-50 border-2 border-yellow-500">
+            <div className="flex items-start gap-3">
+              <span className="text-4xl">⚠️</span>
+              <div>
+                <h3 className="font-bold text-yellow-900 text-lg mb-1">Notice</h3>
+                <p className="text-sm text-yellow-800">{productsError}. Showing sample products instead.</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Category Filter */}
         <div className="card bg-white shadow-lg">
@@ -323,34 +440,46 @@ export default function Marketplace() {
         {/* Search Bar */}
         <div className="card bg-white shadow-lg">
           <div className="flex flex-col gap-4">
-            <div>
-              <label htmlFor="search" className="label-field mb-3">
-                🔍 SEARCH PRODUCE
-              </label>
-              <div className="relative">
-                <input
-                  id="search"
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by name, description, or region..."
-                  className="input-field pr-12"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-500 hover:text-text-700 text-lg transition-colors"
-                    aria-label="Clear search"
-                  >
-                    ✕
-                  </button>
-                )}
+            <div className="flex items-end gap-3">
+              <div className="flex-1">
+                <label htmlFor="search" className="label-field mb-3">
+                  🔍 SEARCH PRODUCE
+                </label>
+                <div className="relative">
+                  <input
+                    id="search"
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search by name, description, or region..."
+                    className="input-field pr-12"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-text-500 hover:text-text-700 text-lg transition-colors"
+                      aria-label="Clear search"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={fetchProducts}
+                disabled={loadingProducts}
+                className="btn-outline px-4 py-3 text-sm font-semibold flex items-center gap-2 disabled:opacity-50"
+                title="Refresh products"
+              >
+                <span className={loadingProducts ? "animate-spin" : ""}>🔄</span>
+                <span className="hidden sm:inline">Refresh</span>
+              </button>
             </div>
             <div className="flex items-center justify-between text-xs text-text-500">
               <span>💡 Try searching: "tomato", "organic", "Maharashtra"</span>
-              <span>{filteredProduce.length} items found</span>
+              <span>{filteredProduce.length} items found ({apiProducts.length} from farmers)</span>
             </div>
           </div>
         </div>
@@ -373,7 +502,16 @@ export default function Marketplace() {
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
-                      <div className="text-4xl md:text-5xl select-none">{item.emoji}</div>
+                      {/* Display image if available, otherwise emoji */}
+                      {item.emoji.startsWith('img:') ? (
+                        <img 
+                          src={item.emoji.substring(4)} 
+                          alt={item.name}
+                          className="w-20 h-20 object-cover rounded-lg"
+                        />
+                      ) : (
+                        <div className="text-4xl md:text-5xl select-none">{item.emoji}</div>
+                      )}
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <h3 className="text-xl font-semibold text-text-900">{item.name}</h3>
@@ -473,7 +611,16 @@ export default function Marketplace() {
                   className="card h-full flex flex-col gap-4 bg-white hover:shadow-lg transition-shadow duration-200"
                 >
                   <div className="flex items-start gap-4">
-                    <div className="text-4xl md:text-5xl select-none">{item.emoji}</div>
+                    {/* Display image if available, otherwise emoji */}
+                    {item.emoji.startsWith('img:') ? (
+                      <img 
+                        src={item.emoji.substring(4)} 
+                        alt={item.name}
+                        className="w-20 h-20 object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="text-4xl md:text-5xl select-none">{item.emoji}</div>
+                    )}
                     <div className="space-y-1">
                       <h3 className="text-xl font-semibold text-text-900">{item.name}</h3>
                       <div className="flex flex-wrap gap-2">

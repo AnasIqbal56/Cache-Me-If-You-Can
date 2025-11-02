@@ -1,6 +1,7 @@
 import type { Route } from "./+types/signup";
 import { Link } from "react-router";
 import { useState } from "react";
+import { API_ENDPOINTS, apiRequest } from "../config/api";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -12,7 +13,6 @@ export function meta({}: Route.MetaArgs) {
 export default function Signup() {
   const [formData, setFormData] = useState({
     name: "",
-    email: "",
     password: "",
     confirmPassword: "",
     phone: "",
@@ -35,12 +35,6 @@ export default function Signup() {
       newErrors.name = "Name is required";
     } else if (formData.name.trim().length < 2) {
       newErrors.name = "Name must be at least 2 characters";
-    }
-    
-    if (!formData.email) {
-      newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
     }
     
     if (!formData.password) {
@@ -83,15 +77,70 @@ export default function Signup() {
     }
 
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      console.log("Signup data:", formData);
-      // Set authentication flag in localStorage
+    
+    try {
+      // Call the backend API
+      // Map "farmer" to "seller" for backend compatibility
+      const role = formData.userType === 'farmer' ? 'seller' : formData.userType;
+      
+      const response = await apiRequest(API_ENDPOINTS.REGISTER, {
+        method: 'POST',
+        body: JSON.stringify({
+          username: formData.name,
+          phoneno: formData.phone,
+          password: formData.password,
+          confirmPassword: formData.confirmPassword,
+          role: role,
+          region: formData.region,
+        }),
+      });
+
+      console.log("Registration successful:", response);
+      
+      // After successful registration, log the user in automatically
+      const loginResponse = await apiRequest(API_ENDPOINTS.LOGIN, {
+        method: 'POST',
+        body: JSON.stringify({
+          phoneno: formData.phone,
+          password: formData.password,
+        }),
+      });
+
+      // Set authentication flag and user data in localStorage
       localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('userPhone', formData.phone);
+      // Store the actual role from backend response (seller/buyer)
+      localStorage.setItem('userRole', loginResponse.data.user.role);
+      localStorage.setItem('accessToken', loginResponse.data.accessToken);
+      localStorage.setItem('userId', loginResponse.data.user._id);
+      localStorage.setItem('username', loginResponse.data.user.username);
+      
       setIsLoading(false);
-      // Redirect to marketplace
-      window.location.href = '/marketplace';
-    }, 1500);
+      
+      // Redirect based on role: seller (farmer) to farmer-dashboard, buyer to marketplace
+      if (loginResponse.data.user.role === 'seller') {
+        window.location.href = '/farmer-dashboard';
+      } else {
+        window.location.href = '/marketplace';
+      }
+    } catch (error: any) {
+      setIsLoading(false);
+      console.error("Signup error:", error);
+      
+      // Show user-friendly error message
+      let errorMessage = error.message || "Registration failed. Please try again.";
+      
+      // Map specific backend errors to user-friendly messages
+      if (errorMessage.includes("username already exists") || errorMessage.includes("Phoneno or username already exists")) {
+        errorMessage = "This phone number or username is already registered. Please try logging in instead.";
+      } else if (errorMessage.includes("Password and confirm password do not match")) {
+        errorMessage = "Passwords do not match. Please check and try again.";
+      } else if (errorMessage.includes("Cannot connect to server")) {
+        errorMessage = "Cannot connect to server. Please ensure the backend is running.";
+      }
+      
+      setErrors({ name: errorMessage });
+    }
   };
 
   const handleAdminAccess = () => {
@@ -144,49 +193,26 @@ export default function Signup() {
         {/* Signup Card */}
         <div className="card">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Name and Email Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="name" className="label-field">
-                  🍓 FULL NAME
-                </label>
-                <input
-                  id="name"
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange("name", e.target.value)}
-                  placeholder="John Doe"
-                  className={`input-field ${errors.name ? "border-red-500 focus:border-red-500 focus:ring-red-200" : ""}`}
-                  disabled={isLoading}
-                />
-                {errors.name && (
-                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                    <span>⚠️</span>
-                    <span>{errors.name}</span>
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="email" className="label-field">
-                  🍊 EMAIL ADDRESS
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  placeholder="john@example.com"
-                  className={`input-field ${errors.email ? "border-red-500 focus:border-red-500 focus:ring-red-200" : ""}`}
-                  disabled={isLoading}
-                />
-                {errors.email && (
-                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                    <span>⚠️</span>
-                    <span>{errors.email}</span>
-                  </p>
-                )}
-              </div>
+            {/* Name Field */}
+            <div>
+              <label htmlFor="name" className="label-field">
+                🍓 FULL NAME
+              </label>
+              <input
+                id="name"
+                type="text"
+                value={formData.name}
+                onChange={(e) => handleInputChange("name", e.target.value)}
+                placeholder="John Doe"
+                className={`input-field ${errors.name ? "border-red-500 focus:border-red-500 focus:ring-red-200" : ""}`}
+                disabled={isLoading}
+              />
+              {errors.name && (
+                <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                  <span>⚠️</span>
+                  <span>{errors.name}</span>
+                </p>
+              )}
             </div>
 
             {/* Phone and Region Row */}

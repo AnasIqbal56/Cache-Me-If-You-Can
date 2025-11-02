@@ -1,6 +1,7 @@
 import type { Route } from "./+types/login";
 import { Link } from "react-router";
 import { useState } from "react";
+import { API_ENDPOINTS, apiRequest } from "../config/api";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -10,19 +11,19 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Login() {
-  const [email, setEmail] = useState("");
+  const [phoneno, setPhoneno] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ phoneno?: string; password?: string }>({});
 
   const validateForm = () => {
-    const newErrors: { email?: string; password?: string } = {};
+    const newErrors: { phoneno?: string; password?: string } = {};
     
-    if (!email) {
-      newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = "Please enter a valid email address";
+    if (!phoneno) {
+      newErrors.phoneno = "Phone number is required";
+    } else if (!/^\+?[\d\s\-()]{10,}$/.test(phoneno)) {
+      newErrors.phoneno = "Please enter a valid phone number";
     }
     
     if (!password) {
@@ -43,25 +44,53 @@ export default function Login() {
     }
 
     setIsLoading(true);
-    // Simulate API call - Check demo credentials
-    setTimeout(() => {
-      console.log("Login attempt:", { email, password });
+    
+    try {
+      // Call the backend API
+      const response = await apiRequest(API_ENDPOINTS.LOGIN, {
+        method: 'POST',
+        body: JSON.stringify({
+          phoneno,
+          password,
+        }),
+      });
+
+      console.log("Login successful:", response);
       
-      // Check if it's the demo account or just accept any valid credentials
-      const isDemoAccount = email === "farmer@freshharvest.com" && password === "Fresh@123";
+      // Set authentication flag and user data in localStorage
+      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('userPhone', phoneno);
+      localStorage.setItem('userRole', response.data.user.role);
+      localStorage.setItem('accessToken', response.data.accessToken);
+      localStorage.setItem('userId', response.data.user._id);
+      localStorage.setItem('username', response.data.user.username);
       
-      if (isDemoAccount || (email && password.length >= 6)) {
-        // Set authentication flag in localStorage
-        localStorage.setItem('isAuthenticated', 'true');
-        localStorage.setItem('userEmail', email);
-        setIsLoading(false);
-        // Redirect to marketplace
-        window.location.href = '/marketplace';
+      setIsLoading(false);
+      
+      // Redirect based on role
+      if (response.data.user.role === 'seller') {
+        window.location.href = '/farmer-dashboard';
       } else {
-        setIsLoading(false);
-        setErrors({ email: "Invalid email or password" });
+        window.location.href = '/marketplace';
       }
-    }, 1500);
+    } catch (error: any) {
+      setIsLoading(false);
+      console.error("Login error:", error);
+      
+      // Show user-friendly error message
+      let errorMessage = error.message || "Invalid phone number or password";
+      
+      // Map specific backend errors to user-friendly messages
+      if (errorMessage.includes("User doesn't exist")) {
+        errorMessage = "No account found with this phone number. Please sign up first.";
+      } else if (errorMessage.includes("Incorrect Password")) {
+        errorMessage = "Incorrect password. Please try again.";
+      } else if (errorMessage.includes("Cannot connect to server")) {
+        errorMessage = "Cannot connect to server. Please ensure the backend is running.";
+      }
+      
+      setErrors({ phoneno: errorMessage });
+    }
   };
 
   return (
@@ -94,7 +123,7 @@ export default function Login() {
             <span className="text-2xl">💡</span>
             <div className="text-sm">
               <p className="font-semibold text-text-900 mb-2">Demo Credentials:</p>
-              <p className="text-text-700"><span className="font-semibold">Email:</span> farmer@freshharvest.com</p>
+              <p className="text-text-700"><span className="font-semibold">Phone:</span> +1234567890</p>
               <p className="text-text-700"><span className="font-semibold">Password:</span> Fresh@123</p>
             </div>
           </div>
@@ -103,27 +132,27 @@ export default function Login() {
         {/* Login Card */}
         <div className="card">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Field */}
+            {/* Phone Number Field */}
             <div>
-              <label htmlFor="email" className="label-field">
-                📧 Email Address
+              <label htmlFor="phoneno" className="label-field">
+                � Phone Number
               </label>
               <input
-                id="email"
-                type="email"
-                value={email}
+                id="phoneno"
+                type="tel"
+                value={phoneno}
                 onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (errors.email) setErrors({ ...errors, email: undefined });
+                  setPhoneno(e.target.value);
+                  if (errors.phoneno) setErrors({ ...errors, phoneno: undefined });
                 }}
-                placeholder="your.email@example.com"
-                className={`input-field ${errors.email ? "border-red-500 focus:border-red-500 focus:ring-red-200" : ""}`}
+                placeholder="+1 (555) 123-4567"
+                className={`input-field ${errors.phoneno ? "border-red-500 focus:border-red-500 focus:ring-red-200" : ""}`}
                 disabled={isLoading}
               />
-              {errors.email && (
+              {errors.phoneno && (
                 <p className="text-red-600 text-base mt-2 flex items-center gap-2">
                   <span>⚠️</span>
-                  <span>{errors.email}</span>
+                  <span>{errors.phoneno}</span>
                 </p>
               )}
             </div>

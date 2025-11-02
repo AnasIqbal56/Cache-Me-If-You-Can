@@ -7,10 +7,14 @@ import jwt from "jsonwebtoken";
 
 const registerUser = asyncHandler(async (req, res) => {
   // get user details
-  const { phoneno, username, password , role, region } = req.body;
+  const { phoneno, username, password, confirmPassword, role, region } = req.body;
 
-  if ([username, phoneno, password, region, role ].some((field) => !field || field.trim() === "")) {
-    throw new APIError(400, "Phone no, username, region, role and password are required");
+  if ([username, phoneno, password, confirmPassword, region, role].some((field) => !field || field.trim() === "")) {
+    throw new APIError(400, "Phone no, username, region, role, password and confirm password are required");
+  }
+
+  if (password !== confirmPassword) {
+    throw new APIError(400, "Password and confirm password do not match");
   }
 
   if (role && role.trim() === "") {
@@ -32,7 +36,7 @@ const registerUser = asyncHandler(async (req, res) => {
     phoneno,
     password,
     username,
-    role, // by default role is buyer
+    role,
     region,
   });
 
@@ -82,10 +86,10 @@ const loginUser = asyncHandler(async (req, res) => {
 
   const { phoneno, username, password } = req.body;
 
-  // validate username, email
+  // validate username, phoneno
 
   if (!(username || phoneno)) {
-    throw new APIError(400, "Username or email is required");
+    throw new APIError(400, "Username or phone number is required");
   }
 
   // find if user exist or not
