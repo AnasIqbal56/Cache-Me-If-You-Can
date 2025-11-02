@@ -44,4 +44,19 @@ app.use("/api/v/admins",adminRouter);
 
 app.use("/api/v/tools",toolRouter);
 app.use("/api/v/loans",loanRouter);
+
+// Global Error Handler - Must be after all routes
+app.use((err, req, res, next) => {
+  const statusCode = err.statusCode || 500;
+  const message = err.message || "Something went wrong";
+  
+  res.status(statusCode).json({
+    statusCode,
+    message,
+    data: err.data || null,
+    success: false,
+    errors: err.errors || [],
+  });
+});
+
 export { app };

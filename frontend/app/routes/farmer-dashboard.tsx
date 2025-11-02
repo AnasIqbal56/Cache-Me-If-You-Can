@@ -44,7 +44,7 @@ export default function FarmerDashboard() {
     return typeof window !== 'undefined' ? localStorage.getItem('username') || 'Farmer' : 'Farmer';
   });
 
-  const [activeTab, setActiveTab] = useState<"overview" | "products" | "orders" | "analytics" | "tools">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "products" | "orders" | "tools" | "chatbot">("overview");
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
@@ -279,7 +279,7 @@ export default function FarmerDashboard() {
         {/* Tab Navigation */}
         <div className="card bg-white shadow-lg">
           <div className="flex flex-wrap gap-2">
-            {(["overview", "products", "orders", "tools", "analytics"] as const).map((tab) => (
+            {(["overview", "products", "orders", "tools", "chatbot"] as const).map((tab) => (
               <button
                 key={tab}
                 type="button"
@@ -294,9 +294,9 @@ export default function FarmerDashboard() {
                 {tab === "products" && "🥕"}
                 {tab === "orders" && "📦"}
                 {tab === "tools" && "🛠️"}
-                {tab === "analytics" && "📈"}
+                {tab === "chatbot" && "🧑‍🌾"}
                 {" "}
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === "chatbot" ? "Ask Sardar G" : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
           </div>
@@ -575,25 +575,21 @@ export default function FarmerDashboard() {
           </div>
         )}
 
-        {/* Analytics Tab */}
-        {activeTab === "analytics" && (
-          <div className="space-y-6">
-            <div className="card bg-white shadow-lg">
-              <h2 className="text-xl font-bold text-text-900 mb-4 flex items-center gap-2">
-                <span>📈</span>
-                <span>Sales Analytics</span>
-              </h2>
-              <div className="text-center py-12">
-                <div className="text-6xl mb-4">📊</div>
-                <h3 className="text-xl font-semibold text-text-900 mb-2">Analytics Coming Soon</h3>
-                <p className="text-sm text-text-600 mb-4">
-                  Detailed analytics and insights about your sales, inventory, and performance will be available here.
-                </p>
-                <p className="text-xs text-text-500">
-                  Features: Sales trends, product performance, revenue forecasting, and more!
+        {/* Ask Sardar G Chatbot Tab */}
+        {activeTab === "chatbot" && (
+          <div className="card bg-white shadow-lg">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-primary-100">
+              <div>
+                <h2 className="text-2xl font-bold text-text-900 mb-2 flex items-center gap-3">
+                  <span className="text-4xl">🧑‍🌾</span>
+                  <span>Ask Sardar G</span>
+                </h2>
+                <p className="text-sm text-text-600">
+                  Your AI farming assistant - Ask anything about agriculture, crops, livestock, or farm management!
                 </p>
               </div>
             </div>
+            <ChatbotInterface />
           </div>
         )}
 
@@ -631,6 +627,177 @@ export default function FarmerDashboard() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+// Chatbot Interface Component
+function ChatbotInterface() {
+  const [messages, setMessages] = useState<Array<{ role: 'user' | 'bot'; text: string; timestamp: Date }>>([
+    {
+      role: 'bot',
+      text: 'السلام علیکم! I am Sardar G, your AI farming assistant. 🌾\n\nYou can ask me about:\n• Crop selection and cultivation 🌱\n• Pest control and diseases 🐛\n• Irrigation and water management 💧\n• Fertilizers and soil health 🌿\n• Weather and seasons ☀️\n• Farm equipment and tools 🚜\n• Livestock management 🐄\n\nHow can I help you today?',
+      timestamp: new Date(),
+    }
+  ]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useState<HTMLDivElement | null>(null);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!inputMessage.trim() || isLoading) return;
+
+    const userMessage = {
+      role: 'user' as const,
+      text: inputMessage,
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputMessage('');
+    setIsLoading(true);
+
+    try {
+      const response = await apiRequest(API_ENDPOINTS.ASK_SARDAR_G, {
+        method: 'POST',
+        body: JSON.stringify({ question: inputMessage }),
+      });
+
+      const botMessage = {
+        role: 'bot' as const,
+        text: response.data.answer,
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, botMessage]);
+    } catch (error: any) {
+      console.error('Chatbot error:', error);
+      const errorMessage = {
+        role: 'bot' as const,
+        text: `Sorry, I encountered an error: ${error.message}\n\nPlease try again or rephrase your question.`,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Auto-scroll to bottom when new messages arrive
+  useState(() => {
+    if (messagesEndRef[0]) {
+      messagesEndRef[0].scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+
+  const suggestedQuestions = [
+    "What's the best time to plant wheat in Pakistan?",
+    "How can I control pests organically?",
+    "What are the water requirements for cotton?",
+    "Which fertilizer is best for rice crops?",
+    "How to prepare soil for vegetables?",
+  ];
+
+  return (
+    <div className="flex flex-col h-[600px]">
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto space-y-4 p-4 bg-background-50 rounded-lg">
+        {messages.map((message, index) => (
+          <div
+            key={index}
+            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className={`max-w-[80%] rounded-lg p-4 ${
+                message.role === 'user'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-white border-2 border-text-200 text-text-900'
+              }`}
+            >
+              <div className="flex items-start gap-2 mb-2">
+                <span className="text-2xl">
+                  {message.role === 'user' ? '👤' : '🧑‍🌾'}
+                </span>
+                <span className="font-semibold text-sm">
+                  {message.role === 'user' ? 'You' : 'Sardar G'}
+                </span>
+              </div>
+              <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.text}</p>
+              <p className={`text-xs mt-2 ${message.role === 'user' ? 'text-primary-100' : 'text-text-500'}`}>
+                {message.timestamp.toLocaleTimeString()}
+              </p>
+            </div>
+          </div>
+        ))}
+        
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="bg-white border-2 border-text-200 rounded-lg p-4">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🧑‍🌾</span>
+                <span className="font-semibold text-sm text-text-900">Sardar G</span>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <div className="animate-bounce text-2xl">💭</div>
+                <span className="text-sm text-text-600">Thinking...</span>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        <div ref={(el) => messagesEndRef[0] = el} />
+      </div>
+
+      {/* Suggested Questions */}
+      {messages.length === 1 && (
+        <div className="p-4 bg-background-100 rounded-lg mt-4">
+          <p className="text-xs font-semibold text-text-700 mb-2 uppercase tracking-wider">
+            💡 Suggested Questions
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {suggestedQuestions.map((question, index) => (
+              <button
+                key={index}
+                onClick={() => setInputMessage(question)}
+                className="text-xs px-3 py-2 bg-white border border-text-300 rounded-lg hover:bg-primary-50 hover:border-primary-500 transition-colors text-text-700"
+              >
+                {question}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Input Area */}
+      <form onSubmit={handleSendMessage} className="mt-4 flex gap-2">
+        <input
+          type="text"
+          value={inputMessage}
+          onChange={(e) => setInputMessage(e.target.value)}
+          placeholder="Ask Sardar G anything about farming..."
+          className="flex-1 input-field"
+          disabled={isLoading}
+        />
+        <button
+          type="submit"
+          disabled={isLoading || !inputMessage.trim()}
+          className="btn-primary px-6 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          {isLoading ? (
+            <>
+              <span className="animate-spin">⏳</span>
+              <span className="text-sm font-semibold">Sending...</span>
+            </>
+          ) : (
+            <>
+              <span className="text-xl">📤</span>
+              <span className="text-sm font-semibold">Send</span>
+            </>
+          )}
+        </button>
+      </form>
     </div>
   );
 }

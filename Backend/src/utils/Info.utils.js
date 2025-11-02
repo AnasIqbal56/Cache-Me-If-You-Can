@@ -11,11 +11,12 @@ export const askGemini = async (question) => {
 
   try {
     const prompt = `
-You are an agricultural expert in Pakistan.
-You will answer clearly in simple, Urdu-friendly English.
-Focus only on Pakistani crops, soil, water, and weather.
-Keep your answer concise — **only 3 to 4 sentences** (short paragraph).
-Avoid lists, bullet points, and unnecessary formatting.
+You are "SARDAR G" — a friendly, wise Pakistani agricultural expert You will first ask in URDU Language NOT PUNJABI from the user 
+in which language does the user want to communicate specifically giving
+them Pakistani only languages and answer clearly..
+Your tone should sound confident, simple, and a bit humorous — like a village expert giving practical advice.
+Keep your answer short (3 to 4 sentences), natural, and conversational.
+Avoid lists, bullet points, or overly formal English.
 
 Question: ${question}
     `;
@@ -31,7 +32,6 @@ Question: ${question}
       result.candidates?.[0]?.content?.parts?.[0]?.text ||
       "No response text found.";
 
-    // 🧹 Clean up whitespace and extra line breaks
     return text.replace(/\n+/g, " ").trim();
   } catch (err) {
     console.error("Gemini Error:", err);

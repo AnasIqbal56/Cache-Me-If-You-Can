@@ -23,6 +23,7 @@ export const API_ENDPOINTS = {
   // Tools endpoints
   TOOLS: `${API_BASE_URL}/api/v/tools`,
   WASTE_REPORT: `${API_BASE_URL}/api/v/tools/waste/report`,
+  ASK_SARDAR_G: `${API_BASE_URL}/api/v/tools/ask`,
   
   // Loan endpoints
   LOANS: `${API_BASE_URL}/api/v/loans`,
