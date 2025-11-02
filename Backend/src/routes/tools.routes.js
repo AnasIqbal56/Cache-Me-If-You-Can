@@ -12,15 +12,16 @@ import {
 import { verifyJWT } from '../middlewares/auth.middleware.js';
 import { authorizeRoles } from '../middlewares/role.middleware.js';
 import { getGeminiResponse } from "../controllers/Gemini.controller.js";
-
+import { availLoan } from '../controllers/loanavail.controller.js';
 const router = Router();
 
 
 //_____________________________________________________________
 
+router.route('/availloan').post(authorizeRoles("seller","admin"),availLoan);
+
 // Water consumption route
 // Tested Working
-
 router.route('/water-consumption')
     .post(verifyJWT, authorizeRoles("seller", "admin"), waterconsumption);
 

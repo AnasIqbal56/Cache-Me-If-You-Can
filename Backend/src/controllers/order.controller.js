@@ -6,21 +6,22 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import mongoose from "mongoose";
 import { Order } from "../models/order.models.js";
 import { Auditlog } from "../models/auditlog.models.js";
-import stripe from "../config/stripe.js";
+import Stripe from "stripe";
 
-// Create order with multiple products
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+// Order creation logic
+// basic logic with Auditlog done
+// ______________________________HAVE TO DISCUSS SOME LOGIC WITH TEAM
 const createOrder = asyncHandler(async (req, res) => {
   const buyerId = req.user._id;
-  const { products, shippingAddress, paymentMethodId } = req.body;
-
-  console.log("📦 Creating order for buyer:", buyerId);
-  console.log("📦 Products:", products);
+  const { products, shippingAddress } = req.body;
 
   if (!buyerId) {
-    throw new APIError(401, "Authentication required");
+    throw new APIError(400, "Authentication required");
   }
 
-  if (!products || products.length === 0) {
+  if (!products || !Array.isArray(products) || products.length === 0) {
     throw new APIError(400, "Cart is empty");
   }
 
@@ -34,15 +35,11 @@ const createOrder = asyncHandler(async (req, res) => {
     throw new APIError(404, "Buyer Not Found");
   }
 
-  // Validate and fetch product details
   let totalAmount = 0;
   const orderProducts = [];
 
+  // Process each product in the order
   for (const item of products) {
-    if (!mongoose.Types.ObjectId.isValid(item.productId)) {
-      throw new APIError(400, `Invalid productId: ${item.productId}`);
-    }
-
     const product = await Product.findById(item.productId).select("price sellerId title");
     if (!product) {
       throw new APIError(404, `Product not found: ${item.productId}`);
@@ -59,9 +56,10 @@ const createOrder = asyncHandler(async (req, res) => {
     });
   }
 
-  console.log(`💰 Total amount: ₹${totalAmount}`);
+  //console.log(`💰 Total amount: ₹${totalAmount}`);
 
   // Create order without payment for now (can add Stripe later)
+  
   const createdOrder = await Order.create({
     buyerId,
     products: orderProducts,
@@ -124,12 +122,18 @@ const getOrderById = asyncHandler(async (req, res) => {
   const buyerId = req.user._id;
 
   if (!(orderId && buyerId)) {
-    throw new APIError(400, "Something Went Wrong, Try Refresing Page");
+    throw new APIError(400, "Something Went Wrong, Try Refreshing Page");
   }
-  const order = await Order.findOne({ _id: order });
+  const order = await Order.findById(orderId).populate('products.productId');
   if (!order) {
     throw new APIError(404, "Order Not Found");
   }
+  
+  // Verify the user has permission to view this order
+  if (order.buyerId.toString() !== buyerId.toString()) {
+    throw new APIError(403, "You don't have permission to view this order");
+  }
+  
   return res
     .status(200)
     .json(new ApiResponse(200, "Order Fetched Successfully", order));
@@ -201,32 +205,46 @@ const cancelOrder = asyncHandler(async (req, res) => {
 const updateOrder = asyncHandler(async (req, res) => {
   const orderId = req.params.id;
   const adminId = req.user._id;
-  const {status} = req.body;
+  const { status } = req.body;
 
-  const admincheck = await User.findById(adminId).select("role");
-  if (admincheck.role !== "admin") {
+  if (!orderId) {
+    throw new APIError(400, "Order ID is required");
+  }
+
+  const adminCheck = await User.findById(adminId).select("role");
+  if (!adminCheck || adminCheck.role !== "admin") {
     throw new APIError(403, "You are not authorized to perform this action");
   }
 
-  if (!(orderId && adminId)) {
-    throw new APIError(400, "Something Went Wrong with Auth, Try Refresing Page");
+  const allowedStatuses = ["processing", "shipped", "delivered", "completed"];
+  if (status && !allowedStatuses.includes(status)) {
+    throw new APIError(400, "Invalid order status");
   }
 
-  const Order = await Order.findOneAndUpdate(
-    {
-      _id: orderId,
-      status: status,
-    },
-    req.body,
-    { new: true },
-  );
+  const updatedOrder = await Order.findByIdAndUpdate(
+    orderId,
+    { status },
+    { 
+      new: true,
+      runValidators: true 
+    }
+  ).populate('products.productId');
 
-  if (!Order) {
+  if (!updatedOrder) {
     throw new APIError(404, "Order Not Found or Can't be updated");
   }
+
+  // Create audit log for status update
+  await Auditlog.create({
+    OrderId: orderId,
+    userId: adminId,
+    action: `Order Status Updated to ${status}`,
+    amount: updatedOrder.totalAmount
+  });
+
   return res
     .status(200)
-    .json(new ApiResponse(200, "Order Updated Successfully", Order));
+    .json(new ApiResponse(200, "Order Updated Successfully", updatedOrder));
 });
 
 // Working
@@ -300,7 +318,7 @@ const raiseDispute = asyncHandler(async (req, res) => {
     const { reason } = req.body;
 
     if (!(buyerId && orderId)) {
-        throw new APIError(400, "Authentication Error, Try Refresing Page OR Login Again");
+        throw new APIError(400, "Authentication Error, Try Refreshing Page OR Login Again");
     }
     if (!reason){
         throw new APIError(400, "Dispute reason is required");
@@ -313,16 +331,28 @@ const raiseDispute = asyncHandler(async (req, res) => {
     if (order.buyerId.toString() !== buyerId.toString()) {
         throw new APIError(403, "You are not authorized to raise dispute for this order");
     }
-    await Order.findByIdAndUpdate(orderId,
-        { status: "disputed" },
-        { new: true });
+
+    const updatedOrder = await Order.findByIdAndUpdate(
+        orderId,
+        { 
+            status: "disputed",
+            disputeReason: reason,
+            disputeDate: new Date()
+        },
+        { new: true }
+    );
+
     await Auditlog.create({
         OrderId: orderId,
         userId: buyerId,
         action: "Dispute Raised",
-        Amount: order.amount,
+        amount: order.totalAmount,
+        details: reason
     });
-    return res.status(200).json(new ApiResponse(200, "Dispute Raised Successfully"),null);
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, "Dispute Raised Successfully", updatedOrder));
 });
 
 

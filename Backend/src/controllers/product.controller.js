@@ -86,7 +86,7 @@ const getProductById = asyncHandler(async (req, res) => {
 const createProduct = asyncHandler(async (req, res) => {
   const sellerId = req.user._id;
 
-  const { title, description, price, condition, verificationId } = req.body;
+  const { title, description, price, condition} = req.body;
 
   console.log("📝 Creating product with:", { title, price, condition, filesCount: req.files?.length });
 
