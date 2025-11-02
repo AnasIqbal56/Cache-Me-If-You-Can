@@ -17,12 +17,20 @@ export const API_ENDPOINTS = {
   // Order endpoints
   ORDERS: `${API_BASE_URL}/api/v/orders`,
   
+  // Payment endpoints
+  PAYMENT: `${API_BASE_URL}/api/v/payments`,
+  EASYPAISA_NUMBER: `${API_BASE_URL}/api/v/payments/easypaisa-number`,
+  
   // Admin endpoints
   ADMIN: `${API_BASE_URL}/api/v/admins`,
   
   // Tools endpoints
   TOOLS: `${API_BASE_URL}/api/v/tools`,
   WASTE_REPORT: `${API_BASE_URL}/api/v/tools/waste/report`,
+  ASK_SARDAR_G: `${API_BASE_URL}/api/v/tools/ask`,
+  
+  // Loan endpoints
+  LOANS: `${API_BASE_URL}/api/v/loans`,
   
   // Seller endpoints
   SELLERS: `${API_BASE_URL}/api/v/sellers`,

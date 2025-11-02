@@ -30,21 +30,36 @@ import productRouter from "./routes/product.routes.js";
 import orderRouter from "./routes/order.routes.js";
 import adminRouter from "./routes/admin.routes.js";
 import toolRouter from "./routes/tools.routes.js";
-
-import sellerRouter from "./routes/seller.routes.js";
+import paymentRouter from "./routes/payment.routes.js";
+import loanRouter from "./routes/loan.routes.js";
 
 
 /// ROUTES declaration
 
 app.use("/api/v/users", userRouter);
-app.use("/api/v/products",productRouter);
-app.use("/api/v/orders",orderRouter);
-app.use("/api/v/admins",adminRouter);
-
+app.use("/api/v/products", productRouter);
+app.use("/api/v/orders", orderRouter);
+app.use("/api/v/admins", adminRouter);
+app.use("/api/v/payments", paymentRouter);
 //__________________________________________________
 //app.use("/api/v/tools",toolRouter);
 //_________________________________________________
 
 app.use("/api/v/tools",toolRouter);
-app.use("/api/v/sellers",sellerRouter);
+app.use("/api/v/loans",loanRouter);
+
+// Global Error Handler - Must be after all routes
+app.use((err, req, res, next) => {
+  const statusCode = err.statusCode || 500;
+  const message = err.message || "Something went wrong";
+  
+  res.status(statusCode).json({
+    statusCode,
+    message,
+    data: err.data || null,
+    success: false,
+    errors: err.errors || [],
+  });
+});
+
 export { app };

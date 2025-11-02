@@ -12,10 +12,14 @@
     "@react-router/node": "^7.9.2",
     "@react-router/serve": "^7.9.2",
     "isbot": "^5.1.31",
+<<<<<<< HEAD
     "p-map": "4.0.0",
+=======
+    "jspdf": "^3.0.3",
+>>>>>>> 979592bec747b236e1a7cdeb5e4576e7b8e0b0f8
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "react-router": "^7.9.2"
+    "react-router": "^7.9.5"
   },
   "devDependencies": {
   "@react-router/dev": "7.9.2",

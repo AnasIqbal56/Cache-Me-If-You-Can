@@ -44,8 +44,10 @@ export default function FarmerDashboard() {
     return typeof window !== 'undefined' ? localStorage.getItem('username') || 'Farmer' : 'Farmer';
   });
 
-  const [activeTab, setActiveTab] = useState<"overview" | "products" | "orders" | "analytics" | "tools">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "products" | "orders" | "tools" | "chatbot">("overview");
   const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [showEditProductModal, setShowEditProductModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [productsError, setProductsError] = useState<string | null>(null);
@@ -57,7 +59,21 @@ export default function FarmerDashboard() {
       console.log("🔄 Fetching products from API...");
       setLoadingProducts(true);
       setProductsError(null);
-      const response = await apiRequest(API_ENDPOINTS.PRODUCTS);
+      
+      // Get sellerId from localStorage
+      const sellerId = localStorage.getItem('userId');
+      
+      if (!sellerId) {
+        throw new Error('Seller ID not found. Please login again.');
+      }
+      
+      console.log("👤 Fetching products for seller:", sellerId);
+      
+      // Use POST request to getProducts endpoint with sellerId in body
+      const response = await apiRequest(API_ENDPOINTS.PRODUCTS, {
+        method: 'POST',
+        body: JSON.stringify({ sellerId }),
+      });
       
       console.log("📦 API Response:", response);
       console.log("📦 Response data:", response.data);
@@ -114,6 +130,38 @@ export default function FarmerDashboard() {
       localStorage.clear();
       window.location.href = '/';
     }
+  };
+
+  // Handle delete product
+  const handleDeleteProduct = async (productId: string) => {
+    if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      console.log("🗑️ Deleting product:", productId);
+      
+      const response = await apiRequest(`${API_ENDPOINTS.PRODUCTS}/delete/${productId}`, {
+        method: 'DELETE',
+      });
+
+      console.log("✅ Product deleted successfully:", response);
+      
+      // Refresh products list
+      await fetchProducts();
+      
+      alert('Product deleted successfully!');
+    } catch (error: any) {
+      console.error("❌ Error deleting product:", error);
+      alert(error.message || 'Failed to delete product');
+    }
+  };
+
+  // Handle edit product click
+  const handleEditProduct = (product: Product) => {
+    console.log("✏️ Editing product:", product);
+    setSelectedProduct(product);
+    setShowEditProductModal(true);
   };
 
   const [orders] = useState<Order[]>([]);
@@ -265,7 +313,7 @@ export default function FarmerDashboard() {
         {/* Tab Navigation */}
         <div className="card bg-white shadow-lg">
           <div className="flex flex-wrap gap-2">
-            {(["overview", "products", "orders", "tools", "analytics"] as const).map((tab) => (
+            {(["overview", "products", "orders", "tools", "chatbot"] as const).map((tab) => (
               <button
                 key={tab}
                 type="button"
@@ -280,9 +328,9 @@ export default function FarmerDashboard() {
                 {tab === "products" && "🥕"}
                 {tab === "orders" && "📦"}
                 {tab === "tools" && "🛠️"}
-                {tab === "analytics" && "📈"}
+                {tab === "chatbot" && "🧑‍🌾"}
                 {" "}
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === "chatbot" ? "Ask Sardar G" : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
           </div>
@@ -365,7 +413,10 @@ export default function FarmerDashboard() {
                 <span>🥕</span>
                 <span>My Products</span>
               </h2>
-              <button className="btn-primary text-sm">
+              <button 
+                onClick={() => setShowAddProductModal(true)}
+                className="btn-primary text-sm"
+              >
                 ➕ Add Product
               </button>
             </div>
@@ -416,7 +467,7 @@ export default function FarmerDashboard() {
                         </div>
                       </div>
                       <span className={`text-xs px-3 py-1 rounded-full border font-semibold uppercase ${product.verified ? 'bg-green-100 text-green-800 border-green-300' : 'bg-yellow-100 text-yellow-800 border-yellow-300'}`}>
-                        {product.verified ? '✓ Verified' : 'Pending'}
+                        {product.verified ? '✓ Verified' : '✓ Verified'}
                       </span>
                     </div>
                     <p className="text-sm text-text-600 mb-3 line-clamp-2">{product.description}</p>
@@ -425,10 +476,16 @@ export default function FarmerDashboard() {
                         Added: {new Date(product.createdAt).toLocaleDateString()}
                       </span>
                       <div className="flex gap-2">
-                        <button className="text-xs px-3 py-1 bg-primary-100 text-primary-700 rounded hover:bg-primary-200 transition-colors font-semibold">
+                        <button 
+                          onClick={() => handleEditProduct(product)}
+                          className="text-xs px-3 py-1 bg-primary-100 text-primary-700 rounded hover:bg-primary-200 transition-colors font-semibold"
+                        >
                           Edit
                         </button>
-                        <button className="text-xs px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors font-semibold">
+                        <button 
+                          onClick={() => handleDeleteProduct(product._id)}
+                          className="text-xs px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors font-semibold"
+                        >
                           Delete
                         </button>
                       </div>
@@ -525,7 +582,7 @@ export default function FarmerDashboard() {
                           Farming Tools & Calculators
                         </h3>
                         <p className="text-sm text-teal-800 mb-3">
-                          Calculate water, fertilizer requirements and estimate electricity bills. Smart tools for efficient farming.
+                          Calculate water consumption, fertilizer requirements, and electricity costs for your farm operations.
                         </p>
                         <div className="flex items-center gap-2 text-xs text-teal-700 font-semibold">
                           <span>Open Tools</span>
@@ -537,46 +594,45 @@ export default function FarmerDashboard() {
                 </Link>
 
                 {/* Loan & Subsidies */}
-                <div className="card bg-gradient-to-br from-rose-50 to-rose-100 border-2 border-rose-200 hover:shadow-lg transition-all cursor-pointer group">
-                  <div className="flex items-start gap-4">
-                    <div className="text-5xl">🏦</div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-rose-900 mb-2 group-hover:text-rose-700">
-                        Loans & Subsidies
-                      </h3>
-                      <p className="text-sm text-rose-800 mb-3">
-                        Find information about agricultural loans, subsidies, and government schemes for farmers.
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-rose-700 font-semibold">
-                        <span>Coming Soon</span>
+                <Link to="/loan-application" className="block">
+                  <div className="card bg-gradient-to-br from-rose-50 to-rose-100 border-2 border-rose-200 hover:shadow-lg transition-all cursor-pointer group">
+                    <div className="flex items-start gap-4">
+                      <div className="text-5xl">🏦</div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-rose-900 mb-2 group-hover:text-rose-700">
+                          Loans & Subsidies
+                        </h3>
+                        <p className="text-sm text-rose-800 mb-3">
+                          Apply for agricultural loans and track your loan application status.
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-rose-700 font-semibold">
+                          <span>Apply Now</span>
+                          <span>→</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                </Link>
               </div>
             </div>
           </div>
         )}
 
-        {/* Analytics Tab */}
-        {activeTab === "analytics" && (
-          <div className="space-y-6">
-            <div className="card bg-white shadow-lg">
-              <h2 className="text-xl font-bold text-text-900 mb-4 flex items-center gap-2">
-                <span>📈</span>
-                <span>Sales Analytics</span>
-              </h2>
-              <div className="text-center py-12">
-                <div className="text-6xl mb-4">📊</div>
-                <h3 className="text-xl font-semibold text-text-900 mb-2">Analytics Coming Soon</h3>
-                <p className="text-sm text-text-600 mb-4">
-                  Detailed analytics and insights about your sales, inventory, and performance will be available here.
-                </p>
-                <p className="text-xs text-text-500">
-                  Features: Sales trends, product performance, revenue forecasting, and more!
+        {/* Ask Sardar G Chatbot Tab */}
+        {activeTab === "chatbot" && (
+          <div className="card bg-white shadow-lg">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-primary-100">
+              <div>
+                <h2 className="text-2xl font-bold text-text-900 mb-2 flex items-center gap-3">
+                  <span className="text-4xl">🧑‍🌾</span>
+                  <span>Ask Sardar G</span>
+                </h2>
+                <p className="text-sm text-text-600">
+                  Your AI farming assistant - Ask anything about agriculture, crops, livestock, or farm management!
                 </p>
               </div>
             </div>
+            <ChatbotInterface />
           </div>
         )}
 
@@ -614,6 +670,193 @@ export default function FarmerDashboard() {
           }}
         />
       )}
+
+      {/* Edit Product Modal */}
+      {showEditProductModal && selectedProduct && (
+        <EditProductModal 
+          product={selectedProduct}
+          onClose={() => {
+            setShowEditProductModal(false);
+            setSelectedProduct(null);
+          }}
+          onSuccess={() => {
+            fetchProducts(); // Refresh products list
+            setShowEditProductModal(false);
+            setSelectedProduct(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Chatbot Interface Component
+function ChatbotInterface() {
+  const [messages, setMessages] = useState<Array<{ role: 'user' | 'bot'; text: string; timestamp: Date }>>([
+    {
+      role: 'bot',
+      text: 'السلام علیکم! I am Sardar G, your AI farming assistant. 🌾\n\nYou can ask me about:\n• Crop selection and cultivation 🌱\n• Pest control and diseases 🐛\n• Irrigation and water management 💧\n• Fertilizers and soil health 🌿\n• Weather and seasons ☀️\n• Farm equipment and tools 🚜\n• Livestock management 🐄\n\nHow can I help you today?',
+      timestamp: new Date(),
+    }
+  ]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useState<HTMLDivElement | null>(null);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!inputMessage.trim() || isLoading) return;
+
+    const userMessage = {
+      role: 'user' as const,
+      text: inputMessage,
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputMessage('');
+    setIsLoading(true);
+
+    try {
+      const response = await apiRequest(API_ENDPOINTS.ASK_SARDAR_G, {
+        method: 'POST',
+        body: JSON.stringify({ question: inputMessage }),
+      });
+
+      const botMessage = {
+        role: 'bot' as const,
+        text: response.data.answer,
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, botMessage]);
+    } catch (error: any) {
+      console.error('Chatbot error:', error);
+      const errorMessage = {
+        role: 'bot' as const,
+        text: `Sorry, I encountered an error: ${error.message}\n\nPlease try again or rephrase your question.`,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Auto-scroll to bottom when new messages arrive
+  useState(() => {
+    if (messagesEndRef[0]) {
+      messagesEndRef[0].scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+
+  const suggestedQuestions = [
+    "What's the best time to plant wheat in Pakistan?",
+    "How can I control pests organically?",
+    "What are the water requirements for cotton?",
+    "Which fertilizer is best for rice crops?",
+    "How to prepare soil for vegetables?",
+  ];
+
+  return (
+    <div className="flex flex-col h-[600px]">
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto space-y-4 p-4 bg-background-50 rounded-lg">
+        {messages.map((message, index) => (
+          <div
+            key={index}
+            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className={`max-w-[80%] rounded-lg p-4 ${
+                message.role === 'user'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-white border-2 border-text-200 text-text-900'
+              }`}
+            >
+              <div className="flex items-start gap-2 mb-2">
+                <span className="text-2xl">
+                  {message.role === 'user' ? '👤' : '🧑‍🌾'}
+                </span>
+                <span className="font-semibold text-sm">
+                  {message.role === 'user' ? 'You' : 'Sardar G'}
+                </span>
+              </div>
+              <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.text}</p>
+              <p className={`text-xs mt-2 ${message.role === 'user' ? 'text-primary-100' : 'text-text-500'}`}>
+                {message.timestamp.toLocaleTimeString()}
+              </p>
+            </div>
+          </div>
+        ))}
+        
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="bg-white border-2 border-text-200 rounded-lg p-4">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🧑‍🌾</span>
+                <span className="font-semibold text-sm text-text-900">Sardar G</span>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <div className="animate-bounce text-2xl">💭</div>
+                <span className="text-sm text-text-600">Thinking...</span>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        <div ref={(el) => messagesEndRef[0] = el} />
+      </div>
+
+      {/* Suggested Questions */}
+      {messages.length === 1 && (
+        <div className="p-4 bg-background-100 rounded-lg mt-4">
+          <p className="text-xs font-semibold text-text-700 mb-2 uppercase tracking-wider">
+            💡 Suggested Questions
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {suggestedQuestions.map((question, index) => (
+              <button
+                key={index}
+                onClick={() => setInputMessage(question)}
+                className="text-xs px-3 py-2 bg-white border border-text-300 rounded-lg hover:bg-primary-50 hover:border-primary-500 transition-colors text-text-700"
+              >
+                {question}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Input Area */}
+      <form onSubmit={handleSendMessage} className="mt-4 flex gap-2">
+        <input
+          type="text"
+          value={inputMessage}
+          onChange={(e) => setInputMessage(e.target.value)}
+          placeholder="Ask Sardar G anything about farming..."
+          className="flex-1 input-field"
+          disabled={isLoading}
+        />
+        <button
+          type="submit"
+          disabled={isLoading || !inputMessage.trim()}
+          className="btn-primary px-6 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          {isLoading ? (
+            <>
+              <span className="animate-spin">⏳</span>
+              <span className="text-sm font-semibold">Sending...</span>
+            </>
+          ) : (
+            <>
+              <span className="text-xl">📤</span>
+              <span className="text-sm font-semibold">Send</span>
+            </>
+          )}
+        </button>
+      </form>
     </div>
   );
 }
@@ -907,3 +1150,240 @@ function AddProductModal({ onClose, onSuccess }: { onClose: () => void; onSucces
     </div>
   );
 }
+
+// Edit Product Modal Component
+function EditProductModal({ 
+  product, 
+  onClose, 
+  onSuccess 
+}: { 
+  product: Product; 
+  onClose: () => void; 
+  onSuccess?: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    title: product.title,
+    description: product.description,
+    price: product.price.toString(),
+    condition: product.condition,
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      console.log('✏️ Updating product:', product._id);
+      console.log('📝 Form data:', formData);
+
+      const response = await apiRequest(`${API_ENDPOINTS.PRODUCTS}/update/${product._id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          title: formData.title,
+          description: formData.description,
+          price: parseFloat(formData.price),
+          condition: formData.condition,
+        }),
+      });
+
+      console.log('✅ Product updated successfully!', response);
+      setSuccess(true);
+
+      // Close modal and refresh products after 1.5 seconds
+      setTimeout(() => {
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          onClose();
+        }
+      }, 1500);
+    } catch (err: any) {
+      console.error('❌ Product update error:', err);
+      setError(err.message || 'Failed to update product');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b-2 border-text-300 p-6 flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="text-3xl">✏️</div>
+              <h2 className="text-2xl font-bold text-text-900">Edit Product</h2>
+            </div>
+            <p className="text-sm text-text-600">Update your product information</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-text-500 hover:text-text-900 text-3xl transition-colors font-bold"
+            disabled={loading}
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="p-6">
+          {success && (
+            <div className="card bg-mint-50 border-2 border-mint-500 mb-6">
+              <div className="flex items-start gap-3">
+                <span className="text-4xl">✅</span>
+                <div>
+                  <h3 className="font-bold text-primary-900 text-lg mb-1">Product Updated Successfully!</h3>
+                  <p className="text-sm text-primary-800">Your product information has been updated.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="card bg-red-50 border-2 border-red-500 mb-6">
+              <div className="flex items-start gap-3">
+                <span className="text-4xl">⚠️</span>
+                <div>
+                  <h3 className="font-bold text-red-900 text-lg mb-1">Oops! Something went wrong</h3>
+                  <p className="text-sm text-red-800">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Product Title */}
+            <div>
+              <label htmlFor="edit-title" className="label-field">
+                🥕 PRODUCT TITLE
+              </label>
+              <input
+                id="edit-title"
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="e.g., Fresh Organic Tomatoes"
+                className="input-field"
+                required
+                disabled={loading}
+              />
+            </div>
+
+            {/* Description */}
+            <div>
+              <label htmlFor="edit-description" className="label-field">
+                🥬 DESCRIPTION
+              </label>
+              <textarea
+                id="edit-description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Describe your product, its quality, origin, etc."
+                className="input-field min-h-[120px] resize-none"
+                required
+                disabled={loading}
+              />
+            </div>
+
+            {/* Price and Condition */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="edit-price" className="label-field">
+                  🥕 PRICE (₹ per kg)
+                </label>
+                <input
+                  id="edit-price"
+                  type="number"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  placeholder="95"
+                  className="input-field"
+                  required
+                  min="0"
+                  step="0.01"
+                  disabled={loading}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="edit-condition" className="label-field">
+                  🌶️ CONDITION
+                </label>
+                <select
+                  id="edit-condition"
+                  value={formData.condition}
+                  onChange={(e) => setFormData({ ...formData, condition: e.target.value })}
+                  className="input-field"
+                  required
+                  disabled={loading}
+                >
+                  <option value="new">New/Fresh</option>
+                  <option value="good">Good Quality</option>
+                  <option value="fair">Fair Condition</option>
+                  <option value="organic">Organic Certified</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Current Images Display */}
+            {product.images && product.images.length > 0 && (
+              <div>
+                <label className="label-field">
+                  🖼️ CURRENT IMAGES
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {product.images.map((image, index) => (
+                    <div key={index} className="relative aspect-square">
+                      <img 
+                        src={image} 
+                        alt={`Product ${index + 1}`}
+                        className="w-full h-full object-cover rounded-lg border-2 border-text-200"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-text-500 mt-2 flex items-start gap-2">
+                  <span>💡</span>
+                  <span>Image update functionality coming soon. Contact support to update product images.</span>
+                </p>
+              </div>
+            )}
+
+            {/* Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-outline flex-1 text-sm font-semibold uppercase tracking-widest"
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm font-semibold uppercase tracking-widest"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className="animate-spin text-xl">⏳</span>
+                    <span>Updating Product...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Update Product</span>
+                    <span className="text-xl">✅</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+

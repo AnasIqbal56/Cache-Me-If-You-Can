@@ -19,11 +19,24 @@ const waterconsumption = asyncHandler(async (req, res) => {
   if (check.role === "buyer" || !check.role) {
     throw new APIError(403, "Only sellers can access this resource");
   }
-  if (
-    [watertype, croptype, area].some((field) => !field || field.trim() === "")
-  ) {
+  
+  // Validate inputs
+  if (!watertype || !croptype || !area) {
     throw new APIError(400, "Watertype, croptype and area is required");
   }
+  
+  if (typeof watertype !== "string" || watertype.trim() === "") {
+    throw new APIError(400, "Valid watertype is required");
+  }
+  
+  if (typeof croptype !== "string" || croptype.trim() === "") {
+    throw new APIError(400, "Valid croptype is required");
+  }
+  
+  if (typeof area !== "number" || area <= 0) {
+    throw new APIError(400, "Area must be a positive number");
+  }
+  
   const ACRE_TO_HECTARE = 0.404686;
   const areaInHectare = area * ACRE_TO_HECTARE;
   const cropWaterData = {
@@ -42,11 +55,8 @@ const waterconsumption = asyncHandler(async (req, res) => {
     mustard: 2200,
     groundnut: 2000,
   };
-  const waterRequired = (cropWaterData[croptype] || 4000) * areaInHectare; // Default to 4000 if crop type not found
+  const waterRequired = (cropWaterData[croptype.toLowerCase()] || 4000) * areaInHectare;
 
-  if (!waterRequired) {
-    throw new APIError(400, "Invalid crop type provided");
-  }
   return res
     .status(200)
     .json(new ApiResponse(200, "Water consumption calculated", waterRequired));
@@ -289,67 +299,6 @@ const electricityBillEstimator = asyncHandler(async (req, res) => {
     })
   );
 });
-
-// const electricityBillEstimator = asyncHandler(async (req, res) => {
-//   const { usage } = req.body;
-
-//   if (!usage || typeof usage !== "object" || Object.keys(usage).length === 0) {
-//     throw new APIError(400, "Usage data is required with equipment hours");
-//   }
-
-//   const equipmentPowerData = {
-//     tubewell: 3700,
-//     waterPump: 1000,
-//     fan: 75,
-//     light: 15,
-//     mill: 1500,
-//     thresher: 2500,
-//     waterCooler: 200,
-//     motorTools: 500,
-//   };
-
-//   const UNIT_RATE = 30;
-
-//   let totalUnits = 0;
-//   const breakdown = [];
-
-//   for (const [equipment, hoursUsed] of Object.entries(usage)) {
-//     const power = equipmentPowerData[equipment.toLowerCase()];
-//     if (!power || hoursUsed <= 0) continue;
-
-//     const energyKWh = (power * hoursUsed) / 1000;
-//     const cost = energyKWh * UNIT_RATE;
-//     totalUnits += energyKWh;
-
-//     breakdown.push({
-//       equipment,
-//       hoursUsed: `${hoursUsed} hours`,
-//       power: `${power} W`,
-//       energyKWh: `${energyKWh.toFixed(2)} kWh`,
-//       cost: `Rs. ${cost.toFixed(2)}`,
-//     });
-//   }
-//   const basiccost = 35
-//   const totalCost = basiccost + totalUnits * UNIT_RATE;
-
-//   if (breakdown.length === 0) {
-//     throw new APIError(400, "No valid equipment data provided");
-//   }
-
-//   let advice = "Use LED lights and efficient motors to reduce cost.";
-//   if (totalCost > 20000) advice = "Consider using solar panels for high-consumption equipment like tubewells.";
-
-//   return res.status(200).json(
-//     new ApiResponse(200, "Electricity bill estimated successfully", {
-//       usage,
-//       unitRate: `${UNIT_RATE} Rs/kWh`,
-//       totalUnits: `${totalUnits.toFixed(2)} kWh`,
-//       totalCost: `Rs. ${totalCost.toFixed(2)}`,
-//       breakdown,
-//       advice,
-//     })
-//   );
-// });
 
 //______________________TO BE IMPLEMENTED_______________________________________
 // Report crop waste and find nearest collection centers
