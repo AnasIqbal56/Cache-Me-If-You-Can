@@ -1,1 +1,1 @@
-export const DB_NAME = "syedrayyan52_db_user";
+export const DB_NAME = "omlettahelka_db_user";
